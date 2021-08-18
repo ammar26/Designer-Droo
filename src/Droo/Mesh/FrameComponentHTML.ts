@@ -23,10 +23,10 @@ class FrameComponentHTML extends ComponentHTML {
     component.parent = this;
     this.children.push(component);
     if(this.layout == "FREE") {
-      if(component.xAnchor == "LEFT") {
+      if(component.xConstraint == "LEFT") {
         component.localPosition.x -= this.position.x;
       }
-      if(component.yAnchor == "TOP") {
+      if(component.yConstraint == "TOP") {
         component.localPosition.y -= this.position.y;
       }
     }
@@ -37,10 +37,10 @@ class FrameComponentHTML extends ComponentHTML {
     this.children = this.children.filter(x => x.id !== component.id);
     component.parent = null;
     if(this.layout == "FREE") {
-      if(component.xAnchor == "LEFT") {
+      if(component.xConstraint == "LEFT") {
         component.localPosition.x += this.position.x;
       }
-      if(component.yAnchor == "TOP") {
+      if(component.yConstraint == "TOP") {
         component.localPosition.y += this.position.y;
       }
     }
@@ -49,24 +49,6 @@ class FrameComponentHTML extends ComponentHTML {
 
   refreshShape = () => {
     this.shape = new Rect(this.boundingRect.topLeft, this.boundingRect.width, this.boundingRect.height);
-  }
-
-  refreshProperties = () => {
-    if(!this.parent) return;
-    this.refreshPosition();
-    this.refreshBoundingRect();
-    this.refreshShape();
-  }
-
-  refreshPropertiesAllBelow = () => {
-    this.refreshProperties();
-    const queue = [];
-    for (let i = 0; i < this.children.length; i++) queue.unshift(this.children[i]);
-    while (queue.length > 0) {
-      let currentNode: ComponentHTML = queue.pop();
-      currentNode.refreshProperties();
-      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
-    }
   }
 
   render = (renderer: RendererHTML) => {

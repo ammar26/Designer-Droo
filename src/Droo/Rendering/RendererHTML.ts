@@ -24,6 +24,7 @@ class RendererHTML {
   }
 
   renderAllBelow = (renderComponent: ComponentHTML) => {
+    renderComponent.render(this);
     const queue = [];
     for (let i = 0; i < renderComponent.children.length; i++) queue.unshift(renderComponent.children[i]);
     while (queue.length > 0) {

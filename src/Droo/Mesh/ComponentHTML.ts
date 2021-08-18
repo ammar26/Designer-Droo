@@ -11,8 +11,8 @@ class ComponentHTML {
   height: number;
   position: Vector2;
   boundingRect: Rect;
-  xAnchor: string;
-  yAnchor: string;
+  xConstraint: string;
+  yConstraint: string;
   outline: boolean;
   outlineWidth: number;
   outlineColor: string;
@@ -34,8 +34,8 @@ class ComponentHTML {
     this.width = width;
     this.height = height;
     this.position = new Vector2(0,0);
-    this.xAnchor = "LEFT";
-    this.yAnchor = "TOP";
+    this.xConstraint = "LEFT";
+    this.yConstraint = "TOP";
     this.outline = false;
     this.outlineWidth = 2;
     this.outlineColor = "#0096FF";
@@ -65,38 +65,42 @@ class ComponentHTML {
     component.refreshPropertiesAllBelow();
   }
 
-  move = (deltaPosition : Vector2) : boolean => {
-    if(!this.isMovable) return null;
+  moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
-
-    this.localPosition.x += (deltaPosition.x * zoomAdjustment);
-    this.localPosition.y += (deltaPosition.y * zoomAdjustment);
+    component.localPosition.x += (deltaPosition.x * zoomAdjustment);
+    component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     this.refreshPropertiesAllBelow();
     return true;
   }
 
-  updateBasePropertiesOnResize = (x:number, y:number, direction: string) => {
-    if(x)
-    if(this.xAnchor == "LEFT") {
-      if(direction == "LEFT") {
-        this.localPosition.x += x;
-        this.width -= x;
+  resizeChild = (x:number, y:number, edge: string, component: ComponentHTML) => {
+    let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
+    x *= zoomAdjustment;
+    y *= zoomAdjustment;
+    if(x) {
+      if(edge == "LEFT") {
+        component.localPosition.x += x;
+        component.width -= x;
       }
-      else if(direction == "RIGHT") {
-        this.width += x;
+      else if(edge == "RIGHT") {
+        component.width += x;
       }
     }
 
-    if(y)
-    if(this.yAnchor == "TOP") {
-      if(direction == "TOP") {
-        this.localPosition.y += y;
-        this.height -= y;
+    if(y) {
+      if(edge == "TOP") {
+        component.localPosition.y += y;
+        component.height -= y;
       }
-      else if(direction == "BOTTOM") {
-        this.height += y;
+      else if(edge == "BOTTOM") {
+        component.height += y;
       }
     }
+  }
+
+  move = (deltaPosition : Vector2) : boolean => {
+    if(!this.isMovable) return null;
+    return this.parent.moveChild(deltaPosition, this);
   }
 
   leftResize = (x:number) : boolean => {
@@ -110,8 +114,8 @@ class ComponentHTML {
       leftChange = this.width;
       rightChange = -1 * diff;
     }
-    this.updateBasePropertiesOnResize(leftChange, 0, "LEFT");
-    if(rightChange) this.updateBasePropertiesOnResize(rightChange, 0, "RIGHT");
+    this.parent.resizeChild(leftChange/zoomAdjustment, 0, "LEFT", this);
+    if(rightChange) this.parent.resizeChild(rightChange/zoomAdjustment, 0, "RIGHT", this);
     this.refreshPropertiesAllBelow();
     if(rightChange) return false;
     else return true;
@@ -128,8 +132,8 @@ class ComponentHTML {
       leftChange = diff;
       rightChange = -1 * this.width;
     }
-    this.updateBasePropertiesOnResize(rightChange, 0, "RIGHT");
-    if(leftChange) this.updateBasePropertiesOnResize(leftChange, 0, "LEFT");
+    this.parent.resizeChild(rightChange/zoomAdjustment, 0, "RIGHT", this);
+    if(leftChange) this.parent.resizeChild(leftChange/zoomAdjustment, 0, "LEFT", this);
     this.refreshPropertiesAllBelow();
     if(leftChange) return false;
     else return true;
@@ -146,8 +150,8 @@ class ComponentHTML {
       topChange = this.height;
       bottomChange = -1 * diff;
     }
-    this.updateBasePropertiesOnResize(0, topChange, "TOP");
-    if(bottomChange) this.updateBasePropertiesOnResize(0, bottomChange, "BOTTOM");
+    this.parent.resizeChild(0, topChange/zoomAdjustment, "TOP", this);
+    if(bottomChange) this.parent.resizeChild(0, bottomChange/zoomAdjustment, "BOTTOM", this);
     this.refreshPropertiesAllBelow();
     if(bottomChange) return false;
     else return true;
@@ -164,8 +168,8 @@ class ComponentHTML {
       topChange = diff;
       bottomChange = -1 * this.height;
     }
-    this.updateBasePropertiesOnResize(0, bottomChange, "BOTTOM");
-    if(topChange) this.updateBasePropertiesOnResize(0, topChange, "TOP");
+    this.parent.resizeChild(0, bottomChange/zoomAdjustment, "BOTTOM", this);
+    if(topChange) this.parent.resizeChild(0, topChange/zoomAdjustment, "TOP", this);
     this.refreshPropertiesAllBelow();
     if(topChange) return false;
     else return true;
@@ -174,15 +178,8 @@ class ComponentHTML {
   refreshPosition = () => {
     let x = 0;
     let y = 0;
-
-    if(this.xAnchor == "LEFT") {
-      x = this.parent.position.x + this.localPosition.x;
-    }
-
-    if (this.yAnchor == "TOP") {
-      y = this.parent.position.y + this.localPosition.y;
-    }
-
+    x = this.parent.position.x + this.localPosition.x;
+    y = this.parent.position.y + this.localPosition.y;
     this.position = new Vector2(x, y);
   }
 
@@ -192,9 +189,23 @@ class ComponentHTML {
 
   refreshShape = () => {}
 
-  refreshProperties = () => {}
+  refreshProperties = () => {
+    if(!this.parent) return;
+    this.refreshPosition();
+    this.refreshBoundingRect();
+    this.refreshShape();
+  }
 
-  refreshPropertiesAllBelow = () => {}
+  refreshPropertiesAllBelow = () => {
+    this.refreshProperties();
+    const queue = [];
+    for (let i = 0; i < this.children.length; i++) queue.unshift(this.children[i]);
+    while (queue.length > 0) {
+      let currentNode: ComponentHTML = queue.pop();
+      currentNode.refreshProperties();
+      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+    }
+  }
 
   isPositionOverOutline = (position: Vector2) : number => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
@@ -244,6 +255,8 @@ class ComponentHTML {
 
   isRectInsideShape = (rect: Rect) : boolean => { return false; }
 
-  render = (renderer: RendererHTML) => {}
+  render = (renderer: RendererHTML) => {
+    this.lastRenderer = renderer;
+  }
 }
 export default ComponentHTML;
