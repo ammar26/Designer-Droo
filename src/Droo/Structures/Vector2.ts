@@ -50,6 +50,13 @@ class Vector2 {
 
     return new Vector2(x, y);
   }
+
+  static getAddedVector = (a: Vector2, b: Vector2) => {
+    const x = a.x + b.x;
+    const y = a.y + b.y;
+
+    return new Vector2(x, y);
+  }
 }
 
 export default Vector2;

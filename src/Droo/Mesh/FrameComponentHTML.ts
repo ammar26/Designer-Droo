@@ -5,15 +5,30 @@ import RendererHTML from "../Rendering/RendererHTML";
 
 class FrameComponentHTML extends ComponentHTML {
   shape: Rect;
+  fillColor: string;
+  
   layout: string;
   direction: string;
-  fillColor: string;
+  paddingTop: number;
+  paddingBottom: number;
+  paddingLeft: number;
+  paddingRight: number;
 
-  constructor(localPosition: Vector2, width: number, height: number, fillColor: string, layout: string = "FREE", direction: string = "NONE") {
+  isParentable: boolean;
+
+
+  constructor(localPosition: Vector2, width: number, height: number, fillColor: string = "#000000", layout: string = "FREE", direction: string = "NONE") {
     super(localPosition, width, height, "FRAME");
     this.fillColor = fillColor;
+
     this.layout = layout;
     this.direction = direction;
+    this.paddingTop = 10;
+    this.paddingBottom = 10;
+    this.paddingLeft = 10;
+    this.paddingRight = 10;
+
+    this.isParentable = true;
     this.refreshBoundingRect();
     this.refreshShape();
   }
@@ -23,11 +38,13 @@ class FrameComponentHTML extends ComponentHTML {
     component.parent = this;
     this.children.push(component);
     if(this.layout == "FREE") {
-        component.localPosition.x -= this.position.x;
-        component.localPosition.y -= this.position.y;
+      component.localPosition.x -= this.position.x;
+      component.localPosition.y -= this.position.y;
     } 
     else if (this.layout == "AUTO") {
-
+      component.localPosition.x -= this.position.x;
+      component.localPosition.y -= this.position.y;
+      component.autoMode = true;
     }
     this.refreshPropertiesAllBelow();
   }
@@ -36,11 +53,13 @@ class FrameComponentHTML extends ComponentHTML {
     this.children = this.children.filter(x => x.id !== component.id);
     component.parent = null;
     if(this.layout == "FREE") {
-        component.localPosition.x += this.position.x;
-        component.localPosition.y += this.position.y;
+      component.localPosition.x += this.position.x;
+      component.localPosition.y += this.position.y;
     }
     else if (this.layout == "AUTO") {
-      
+      component.localPosition.x += this.position.x;
+      component.localPosition.y += this.position.y;
+      component.autoMode = false;
     }
     this.refreshPropertiesAllBelow();
   }
@@ -52,7 +71,8 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
     else if (this.layout == "AUTO") {
-      
+      component.localPosition.x += (deltaPosition.x * zoomAdjustment);
+      component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
     this.refreshPropertiesAllBelow();
     return true;
@@ -95,12 +115,15 @@ class FrameComponentHTML extends ComponentHTML {
   render = (renderer: RendererHTML) => {
     if(!this.active) return;
     this.lastRenderer = renderer;
-    renderer.ctx.fillStyle = this.fillColor;
-    renderer.ctx.fillRect(this.shape.topLeft.x, this.shape.topLeft.y, this.shape.width, this.shape.height);
+
+    if(this.fillMode) {
+      renderer.ctx.fillStyle = this.fillColor;
+      renderer.ctx.fillRect(this.shape.topLeft.x, this.shape.topLeft.y, this.shape.width, this.shape.height);
+    }
     
     const zoomAdjustment = 1/renderer.cameraZoom;
     const outlineWidthZoomed = this.outlineWidth * zoomAdjustment;
-    if(this.outline) {
+    if(this.outlineMode) {
       renderer.ctx.strokeStyle = this.outlineColor;
       renderer.ctx.lineWidth = outlineWidthZoomed;
       if(this.outlineStyle == "SOLID") renderer.ctx.setLineDash([]);
@@ -120,6 +143,10 @@ class FrameComponentHTML extends ComponentHTML {
     && this.shape.isPositionInside(rect.bottomRight))
     return true;
     else return false;
+  }
+
+  calculateAutoLocalPositions = () => {
+
   }
 }
 

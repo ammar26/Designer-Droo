@@ -14,10 +14,11 @@ class ComponentHTML {
   boundingRect: Rect;
   xConstraint: string;
   yConstraint: string;
-  outline: boolean;
+  outlineMode: boolean;
   outlineWidth: number;
   outlineColor: string;
   outlineStyle: string;
+  fillMode: boolean;
   autoMode: boolean;
   active: boolean;
 
@@ -40,10 +41,11 @@ class ComponentHTML {
     this.position = new Vector2(0,0);
     this.xConstraint = "LEFT";
     this.yConstraint = "TOP";
-    this.outline = false;
+    this.outlineMode = false;
     this.outlineWidth = 2;
     this.outlineColor = "#0096FF";
     this.outlineStyle = "SOLID";
+    this.fillMode = true;
     this.autoMode = false;
     this.active = true;
 
@@ -193,8 +195,14 @@ class ComponentHTML {
   refreshPosition = () => {
     let x = 0;
     let y = 0;
-    x = this.parent.position.x + this.localPosition.x;
-    y = this.parent.position.y + this.localPosition.y;
+    if(this.autoMode) {
+      x = this.parent.position.x + this.autoLocalPosition.x;
+      y = this.parent.position.y + this.autoLocalPosition.y;
+    }
+    else {
+      x = this.parent.position.x + this.localPosition.x;
+      y = this.parent.position.y + this.localPosition.y;
+    }
     this.position = new Vector2(x, y);
   }
 

@@ -9,7 +9,7 @@ class Designer {
   canvasHTML: canvasHTML;
   mouseMode: string;
   mouseSubMode: string;
-  hoveredComponent: ComponentHTML;
+  placeholderOutline: ComponentHTML;
   selectedComponent: ComponentHTML;
   ComponentFrameContainer: ComponentHTML;
 
@@ -25,7 +25,7 @@ class Designer {
     this.canvasHTML.mouse.addEvent("MouseMove", this.onMouseMove);
     this.canvasHTML.mouse.addEvent("MouseUp", this.onMouseUp);
     // Intialize class variables
-    this.hoveredComponent = null;
+    this.placeholderOutline = null;
     this.selectedComponent = null;
     this.ComponentFrameContainer = null;
     this.mouseMode = "SELECT";
@@ -89,7 +89,7 @@ class Designer {
     }
     // If mouse modes allows move, then move
     else if (move) {
-      this.move(this.canvasHTML.mouse.deltaMovement);
+      this.move(this.canvasHTML.mouse.deltaMovement, position);
     } 
     // Update after move event
     this.update();
@@ -107,16 +107,22 @@ class Designer {
     if (this.mouseMode == "MOVE") {
       // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected
       if(!this.canvasHTML.mouse.leftDown) this.mouseMode = "SELECTED";
-      // If component is selected then enable its outline
+      // If component is selected then enable its outline and active state
       if(this.selectedComponent) {
         this.selectedComponent.outlineStyle = "SOLID";
-        this.selectedComponent.outline = true;
+        this.selectedComponent.outlineMode = true;
+        this.selectedComponent.active = true;
       }
       // If frame container exists because it can add selected component
       if(this.ComponentFrameContainer) {
         // Disable the outline of the frame container
-        this.ComponentFrameContainer.outline = false;
+        this.ComponentFrameContainer.outlineMode = false;
         this.ComponentFrameContainer = null;
+      }
+      // Remove the auto child overlay component if it exists
+      if(this.placeholderOutline) {
+        this.canvasHTML.removeComponent(this.placeholderOutline);
+        this.placeholderOutline = null;
       }
     }
     // Check if mouse over selected component check can be done
@@ -134,14 +140,14 @@ class Designer {
   selectComponent = (position: Vector2) => { 
     // Unselect the previously selected component
     if(this.selectedComponent) {
-      this.selectedComponent.outline = false;
+      this.selectedComponent.outlineMode = false;
       this.selectedComponent = null;
     }
     // If component is selected then draw its outline and change mouse mode accordingly
     this.selectedComponent = this.canvasHTML.pickComponentByShape(position);
     if(this.selectedComponent) {
       this.selectedComponent.outlineStyle = "SOLID";
-      this.selectedComponent.outline = true;
+      this.selectedComponent.outlineMode = true;
       this.mouseMode = "SELECTED";
     } else {
       this.mouseMode = "SELECT";
@@ -194,42 +200,68 @@ class Designer {
   }
 
   setupDemo = () => {
-    const x = new FrameComponentHTML(new Vector2(100,100), 250, 250, "#FFBF00");
-    const y = new FrameComponentHTML(new Vector2(500,200), 50, 50, "#0FFF00");
-    const z = new FrameComponentHTML(new Vector2(700,300), 70, 70, "#FF0000");
+    const a = new FrameComponentHTML(new Vector2(100,100), 250, 250, "#FFBF00");
+    const b = new FrameComponentHTML(new Vector2(400,400), 250, 250, "#AAFFFF", "AUTO", "HORIZONTAL");
+    const x = new FrameComponentHTML(new Vector2(500,200), 50, 50, "#0FFF00");
+    const y = new FrameComponentHTML(new Vector2(700,300), 70, 70, "#FF0000");
+    this.canvasHTML.addComponent(a);
+    this.canvasHTML.addComponent(b);
     this.canvasHTML.addComponent(x);
     this.canvasHTML.addComponent(y);
-    this.canvasHTML.addComponent(z);
     this.update();
   }
 
-  move = (deltaMovement: Vector2) => {
+  move = (deltaMovement: Vector2, position: Vector2) => {
     // If component is selected, move it by delta movement values
     if(this.selectedComponent) {
-      this.selectedComponent.outline = false;
+      this.selectedComponent.outlineMode = false;
       this.selectedComponent.move(new Vector2(deltaMovement.x, deltaMovement.y));
+      // If place holder outline exists then move it along with selected component
+      if(this.placeholderOutline) this.placeholderOutline.move(new Vector2(deltaMovement.x, deltaMovement.y));
       // Remove the data of old frame container
       if(this.ComponentFrameContainer) {
-        this.ComponentFrameContainer.outline = false;
+        this.ComponentFrameContainer.outlineMode = false;
         this.ComponentFrameContainer = null;
       }
       // If selected component can be added to a frame, then update the data for new frame container
-      this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(this.selectedComponent);
+      this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.selectedComponent);
       // If frame container exists because it can add selected component
       if(this.ComponentFrameContainer) {
         // Draw the frame continer outline
         this.ComponentFrameContainer.outlineStyle = "SOLID";
-        this.ComponentFrameContainer.outline = true;
+        this.ComponentFrameContainer.outlineMode = true;
         // If selected component has a different parent
         if(this.ComponentFrameContainer.id !== this.selectedComponent.parent.id) {
-          // Add selected component to new frame container
-          this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
+          // If frame container has free layout then add selected component to new frame container
+          if((this.ComponentFrameContainer as FrameComponentHTML).layout == "FREE") {
+            this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
+          }
+          // If frame container has auto layout then add selected component as inactive to new frame container
+          else if((this.ComponentFrameContainer as FrameComponentHTML).layout == "AUTO") {
+            this.selectedComponent.active = false;
+            this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
+            // Create place holder outline component only in root tree to follow selected component to indicate movement in auto layout frame
+            this.placeholderOutline = new FrameComponentHTML(Vector2.getAddedVector(this.ComponentFrameContainer.position, this.selectedComponent.localPosition), this.selectedComponent.width, this.selectedComponent.height);
+            (this.placeholderOutline as FrameComponentHTML).isParentable = false;
+            this.placeholderOutline.fillMode = false;
+            this.placeholderOutline.outlineMode = true;
+            this.placeholderOutline.outlineStyle = "DOTTED";
+            this.canvasHTML.addComponent(this.placeholderOutline);
+          }
         }
       }
       // If frame container does not exist then remove the selected object from any frame container and add it back to canvas
       else {
         // Add it back to canvas if its not already at root
-        if(!this.selectedComponent.parent.isRoot) this.canvasHTML.addComponent(this.selectedComponent);
+        if(!this.selectedComponent.parent.isRoot) {
+          this.canvasHTML.addComponent(this.selectedComponent);
+          this.selectedComponent.active = true;
+        }
+        // Remove the auto child overlay component if it exists
+        if(this.placeholderOutline) {
+          this.canvasHTML.removeComponent(this.placeholderOutline);
+          this.placeholderOutline = null;
+        }
       }
     }
   }

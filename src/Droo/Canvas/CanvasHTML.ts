@@ -140,7 +140,7 @@ class CanvasHTML {
     return pickedComponent;
   }
 
-  pickComponentFrameContainer = (component: ComponentHTML, treeNode: ComponentHTML = null) : ComponentHTML => {
+  pickComponentFrameContainer = (position: Vector2, component: ComponentHTML, treeNode: ComponentHTML = null) : ComponentHTML => {
     if(!treeNode) treeNode = this.defaultRootTreeNode;
     if(!treeNode.active) return;
 
@@ -151,13 +151,17 @@ class CanvasHTML {
       let currentNode: ComponentHTML = queue.pop();
       if(currentNode.id !== component.id && currentNode.type == "FRAME") {
         const currentFrameNode = currentNode as FrameComponentHTML;
-        if(currentFrameNode.layout == "FREE") {
-          if(currentNode.isRectInsideBoundedRect(component.boundingRect)) {
-            pickedComponent = currentNode;
+        if(currentFrameNode.isParentable) {
+          if(currentFrameNode.layout == "FREE") {
+            if(currentNode.isRectInsideBoundedRect(component.boundingRect)) {
+              pickedComponent = currentNode;
+            }
           }
-        }
-        else if(currentFrameNode.layout == "AUTO") {
-          
+          else if(currentFrameNode.layout == "AUTO") {
+            if(currentNode.isPositionInsideBoundedRect(position)) {
+              pickedComponent = currentNode;
+            }
+          }
         }
       }
       for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
