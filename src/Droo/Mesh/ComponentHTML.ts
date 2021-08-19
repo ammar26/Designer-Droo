@@ -7,6 +7,7 @@ class ComponentHTML {
   id: number;
   type: string;
   localPosition: Vector2;
+  autoLocalPosition: Vector2;
   width: number;
   height: number;
   position: Vector2;
@@ -17,6 +18,8 @@ class ComponentHTML {
   outlineWidth: number;
   outlineColor: string;
   outlineStyle: string;
+  autoMode: boolean;
+  active: boolean;
 
   isPickable: boolean;
   isResizable: boolean;
@@ -31,6 +34,7 @@ class ComponentHTML {
     this.id = identifier.getNextID();
     this.type = type;
     this.localPosition = new Vector2(localPosition.x, localPosition.y);
+    this.autoLocalPosition = new Vector2(0,0);
     this.width = width;
     this.height = height;
     this.position = new Vector2(0,0);
@@ -40,6 +44,8 @@ class ComponentHTML {
     this.outlineWidth = 2;
     this.outlineColor = "#0096FF";
     this.outlineStyle = "SOLID";
+    this.autoMode = false;
+    this.active = true;
 
     this.isPickable = true;
     this.isResizable = true;
@@ -56,12 +62,16 @@ class ComponentHTML {
     if(component.parent) component.parent.removeChild(component);
     component.parent = this;
     this.children.push(component);
+    component.localPosition.x -= this.position.x;
+    component.localPosition.y -= this.position.y;
     component.refreshPropertiesAllBelow();
   }
 
   removeChild = (component: ComponentHTML) => {
     this.children = this.children.filter(x => x.id !== component.id);
     component.parent = null;
+    component.localPosition.x += this.position.x;
+    component.localPosition.y += this.position.y;
     component.refreshPropertiesAllBelow();
   }
 
@@ -69,7 +79,7 @@ class ComponentHTML {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
     component.localPosition.x += (deltaPosition.x * zoomAdjustment);
     component.localPosition.y += (deltaPosition.y * zoomAdjustment);
-    this.refreshPropertiesAllBelow();
+    component.refreshPropertiesAllBelow();
     return true;
   }
 
@@ -96,6 +106,7 @@ class ComponentHTML {
         component.height += y;
       }
     }
+    component.refreshPropertiesAllBelow();
   }
 
   move = (deltaPosition : Vector2) : boolean => {
@@ -115,9 +126,10 @@ class ComponentHTML {
       rightChange = -1 * diff;
     }
     this.parent.resizeChild(leftChange/zoomAdjustment, 0, "LEFT", this);
-    if(rightChange) this.parent.resizeChild(rightChange/zoomAdjustment, 0, "RIGHT", this);
-    this.refreshPropertiesAllBelow();
-    if(rightChange) return false;
+    if(rightChange) {
+      this.parent.resizeChild(rightChange/zoomAdjustment, 0, "RIGHT", this);
+      return false;
+    } 
     else return true;
   }
 
@@ -133,9 +145,10 @@ class ComponentHTML {
       rightChange = -1 * this.width;
     }
     this.parent.resizeChild(rightChange/zoomAdjustment, 0, "RIGHT", this);
-    if(leftChange) this.parent.resizeChild(leftChange/zoomAdjustment, 0, "LEFT", this);
-    this.refreshPropertiesAllBelow();
-    if(leftChange) return false;
+    if(leftChange) {
+      this.parent.resizeChild(leftChange/zoomAdjustment, 0, "LEFT", this);
+      return false;
+    }
     else return true;
   }
 
@@ -151,9 +164,10 @@ class ComponentHTML {
       bottomChange = -1 * diff;
     }
     this.parent.resizeChild(0, topChange/zoomAdjustment, "TOP", this);
-    if(bottomChange) this.parent.resizeChild(0, bottomChange/zoomAdjustment, "BOTTOM", this);
-    this.refreshPropertiesAllBelow();
-    if(bottomChange) return false;
+    if(bottomChange) {
+      this.parent.resizeChild(0, bottomChange/zoomAdjustment, "BOTTOM", this);
+      return false;
+    }
     else return true;
   }
 
@@ -169,9 +183,10 @@ class ComponentHTML {
       bottomChange = -1 * this.height;
     }
     this.parent.resizeChild(0, bottomChange/zoomAdjustment, "BOTTOM", this);
-    if(topChange) this.parent.resizeChild(0, topChange/zoomAdjustment, "TOP", this);
-    this.refreshPropertiesAllBelow();
-    if(topChange) return false;
+    if(topChange) {
+      this.parent.resizeChild(0, topChange/zoomAdjustment, "TOP", this);
+      return false;
+    }
     else return true;
   }
 
@@ -256,6 +271,7 @@ class ComponentHTML {
   isRectInsideShape = (rect: Rect) : boolean => { return false; }
 
   render = (renderer: RendererHTML) => {
+    if(!this.active) return;
     this.lastRenderer = renderer;
   }
 }

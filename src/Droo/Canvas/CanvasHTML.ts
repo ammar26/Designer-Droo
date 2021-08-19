@@ -104,10 +104,11 @@ class CanvasHTML {
 
   pickComponentByShape = (position: Vector2, treeNode: ComponentHTML = null) : ComponentHTML => {
     if(!treeNode) treeNode = this.defaultRootTreeNode
+    if(!treeNode.active) return;
     
     const queue = [];
     let pickedComponent = null;
-    for (let i = 0; i < treeNode.children.length; i++) queue.unshift(treeNode.children[i]);
+    for (let i = 0; i < treeNode.children.length; i++) if(treeNode.children[i].active) queue.unshift(treeNode.children[i]);
     while (queue.length > 0) {
       let currentNode: ComponentHTML = queue.pop();
       if(currentNode.isPositionInsideShape(position)) {
@@ -115,17 +116,18 @@ class CanvasHTML {
           pickedComponent = currentNode;
         }
       }
-      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+      for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
     }
     return pickedComponent;
   }
 
   pickComponentByBoundedRect = (position: Vector2, treeNode: ComponentHTML = null) : ComponentHTML => {
     if(!treeNode) treeNode = this.defaultRootTreeNode;
-    
+    if(!treeNode.active) return;
+
     const queue = [];
     let pickedComponent = null;
-    for (let i = 0; i < treeNode.children.length; i++) queue.unshift(treeNode.children[i]);
+    for (let i = 0; i < treeNode.children.length; i++) if(treeNode.children[i].active) queue.unshift(treeNode.children[i]);
     while (queue.length > 0) {
       let currentNode: ComponentHTML = queue.pop();
       if(currentNode.isPositionInsideBoundedRect(position)) {
@@ -133,17 +135,18 @@ class CanvasHTML {
           pickedComponent = currentNode;
         }
       }
-      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+      for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
     }
     return pickedComponent;
   }
 
   pickComponentFrameContainer = (component: ComponentHTML, treeNode: ComponentHTML = null) : ComponentHTML => {
     if(!treeNode) treeNode = this.defaultRootTreeNode;
+    if(!treeNode.active) return;
 
     const queue = [];
     let pickedComponent = null;
-    for (let i = 0; i < treeNode.children.length; i++) queue.unshift(treeNode.children[i]);
+    for (let i = 0; i < treeNode.children.length; i++) if(treeNode.children[i].active) queue.unshift(treeNode.children[i]);
     while (queue.length > 0) {
       let currentNode: ComponentHTML = queue.pop();
       if(currentNode.id !== component.id && currentNode.type == "FRAME") {
@@ -153,11 +156,11 @@ class CanvasHTML {
             pickedComponent = currentNode;
           }
         }
-        else {
-
+        else if(currentFrameNode.layout == "AUTO") {
+          
         }
       }
-      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+      for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
     }
     return pickedComponent;
   }

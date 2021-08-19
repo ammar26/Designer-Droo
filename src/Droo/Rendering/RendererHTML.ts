@@ -24,13 +24,14 @@ class RendererHTML {
   }
 
   renderAllBelow = (renderComponent: ComponentHTML) => {
+    if(!renderComponent.active) return;
     renderComponent.render(this);
     const queue = [];
-    for (let i = 0; i < renderComponent.children.length; i++) queue.unshift(renderComponent.children[i]);
+    for (let i = 0; i < renderComponent.children.length; i++) if(renderComponent.children[i].active) queue.unshift(renderComponent.children[i]);
     while (queue.length > 0) {
       let currentNode: ComponentHTML = queue.pop();
       currentNode.render(this);
-      for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+      for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
     }
   }
 
