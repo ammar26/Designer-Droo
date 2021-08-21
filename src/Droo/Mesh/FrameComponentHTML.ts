@@ -16,7 +16,6 @@ class FrameComponentHTML extends ComponentHTML {
 
   isParentable: boolean;
 
-
   constructor(localPosition: Vector2, width: number, height: number, fillColor: string = "#000000", layout: string = "FREE", direction: string = "NONE") {
     super(localPosition, width, height, "FRAME");
     this.fillColor = fillColor;
@@ -46,6 +45,7 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.y -= this.position.y;
       component.autoMode = true;
     }
+    this.calculateChildren();
     this.refreshPropertiesAllBelow();
   }
 
@@ -59,8 +59,9 @@ class FrameComponentHTML extends ComponentHTML {
     else if (this.layout == "AUTO") {
       component.localPosition.x += this.position.x;
       component.localPosition.y += this.position.y;
-      component.autoMode = false;
+      component.autoMode = false;   
     }
+    this.calculateChildren();
     this.refreshPropertiesAllBelow();
   }
 
@@ -74,6 +75,7 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.x += (deltaPosition.x * zoomAdjustment);
       component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
+    this.calculateChildren();
     this.refreshPropertiesAllBelow();
     return true;
   }
@@ -106,6 +108,39 @@ class FrameComponentHTML extends ComponentHTML {
       
     }
     component.refreshPropertiesAllBelow();
+  }
+
+  calculateChildren = () => {
+    if(this.layout == "AUTO") {
+      let width = this.paddingLeft;
+      let height = this.paddingTop;
+      let maxWidth = width;
+      let maxHeight = height;
+      let count = 0;
+      for (let i = 0; i < this.children.length; i++) {
+        if(this.children[i].active) {
+          count++;
+          this.children[i].autoLocalPosition.x = width;
+          this.children[i].autoLocalPosition.y = height;
+          if(this.direction == "HORIZONTAL") {
+            width+= this.children[i].width;
+            maxWidth = width;
+            if(this.children[i].height > maxHeight) maxHeight = this.children[i].height;
+          }
+          else if(this.direction == "VERTICAL") {
+            height+= this.children[i].height;
+            maxHeight = height;
+            if(this.children[i].width >maxWidth) maxWidth = this.children[i].width;
+          }
+        }
+      }
+      maxWidth += this.paddingRight;
+      maxHeight += this.paddingTop+this.paddingBottom;
+      if(count > 0) {
+        this.width = maxWidth;
+        this.height = maxHeight;
+      }
+    }
   }
 
   refreshShape = () => {
@@ -145,8 +180,12 @@ class FrameComponentHTML extends ComponentHTML {
     else return false;
   }
 
-  calculateAutoLocalPositions = () => {
-
+  setLocalFromAuto = () => {
+    this.parent.calculateChildren();
+    this.parent.refreshPropertiesAllBelow();
+    this.localPosition.x = this.autoLocalPosition.x;
+    this.localPosition.y = this.autoLocalPosition.y;
+    this.refreshPropertiesAllBelow();
   }
 }
 

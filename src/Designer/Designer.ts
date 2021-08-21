@@ -112,6 +112,7 @@ class Designer {
         this.selectedComponent.outlineStyle = "SOLID";
         this.selectedComponent.outlineMode = true;
         this.selectedComponent.active = true;
+        if(this.selectedComponent.autoMode) (this.selectedComponent as FrameComponentHTML).setLocalFromAuto();
       }
       // If frame container exists because it can add selected component
       if(this.ComponentFrameContainer) {
@@ -225,16 +226,22 @@ class Designer {
       }
       // If selected component can be added to a frame, then update the data for new frame container
       this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.selectedComponent);
-      // If frame container exists because it can add selected component
+      // If frame container exists then it can add selected component
       if(this.ComponentFrameContainer) {
         // Draw the frame continer outline
         this.ComponentFrameContainer.outlineStyle = "SOLID";
         this.ComponentFrameContainer.outlineMode = true;
         // If selected component has a different parent
         if(this.ComponentFrameContainer.id !== this.selectedComponent.parent.id) {
-          // If frame container has free layout then add selected component to new frame container
+          // Remove the auto child overlay component if it exists
+          if(this.placeholderOutline) {
+            this.canvasHTML.removeComponent(this.placeholderOutline);
+            this.placeholderOutline = null;
+          }
+          // If frame container has free layout then add selected component as active to new frame container
           if((this.ComponentFrameContainer as FrameComponentHTML).layout == "FREE") {
             this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
+            this.selectedComponent.active = true;
           }
           // If frame container has auto layout then add selected component as inactive to new frame container
           else if((this.ComponentFrameContainer as FrameComponentHTML).layout == "AUTO") {
@@ -314,6 +321,7 @@ class Designer {
     // Update the view
     this.updateCursor();
     this.canvasHTML.update();
+    if(this.placeholderOutline) this.placeholderOutline.render(this.canvasHTML.rendererHTML);
   }
 }
 

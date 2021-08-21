@@ -66,6 +66,7 @@ class ComponentHTML {
     this.children.push(component);
     component.localPosition.x -= this.position.x;
     component.localPosition.y -= this.position.y;
+    component.calculateChildren();
     component.refreshPropertiesAllBelow();
   }
 
@@ -74,6 +75,7 @@ class ComponentHTML {
     component.parent = null;
     component.localPosition.x += this.position.x;
     component.localPosition.y += this.position.y;
+    component.calculateChildren();
     component.refreshPropertiesAllBelow();
   }
 
@@ -81,6 +83,7 @@ class ComponentHTML {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
     component.localPosition.x += (deltaPosition.x * zoomAdjustment);
     component.localPosition.y += (deltaPosition.y * zoomAdjustment);
+    component.calculateChildren();
     component.refreshPropertiesAllBelow();
     return true;
   }
@@ -108,7 +111,12 @@ class ComponentHTML {
         component.height += y;
       }
     }
+    component.calculateChildren();
     component.refreshPropertiesAllBelow();
+  }
+
+  calculateChildren = () => {
+    
   }
 
   move = (deltaPosition : Vector2) : boolean => {
@@ -195,7 +203,7 @@ class ComponentHTML {
   refreshPosition = () => {
     let x = 0;
     let y = 0;
-    if(this.autoMode) {
+    if(this.autoMode && this.active) {
       x = this.parent.position.x + this.autoLocalPosition.x;
       y = this.parent.position.y + this.autoLocalPosition.y;
     }
