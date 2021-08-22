@@ -13,6 +13,7 @@ class FrameComponentHTML extends ComponentHTML {
   paddingBottom: number;
   paddingLeft: number;
   paddingRight: number;
+  spacing: number;
 
   isParentable: boolean;
 
@@ -26,6 +27,7 @@ class FrameComponentHTML extends ComponentHTML {
     this.paddingBottom = 10;
     this.paddingLeft = 10;
     this.paddingRight = 10;
+    this.spacing = 20;
 
     this.isParentable = true;
     this.refreshBoundingRect();
@@ -45,8 +47,8 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.y -= this.position.y;
       component.autoMode = true;
     }
-    this.calculateChildren();
     this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAbove();
   }
 
   removeChild = (component: ComponentHTML) => {
@@ -61,8 +63,8 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.y += this.position.y;
       component.autoMode = false;   
     }
-    this.calculateChildren();
     this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAbove();
   }
 
   moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
@@ -75,8 +77,8 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.x += (deltaPosition.x * zoomAdjustment);
       component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
-    this.calculateChildren();
     this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAbove();
     return true;
   }
 
@@ -112,33 +114,63 @@ class FrameComponentHTML extends ComponentHTML {
 
   calculateChildren = () => {
     if(this.layout == "AUTO") {
-      let width = this.paddingLeft;
-      let height = this.paddingTop;
-      let maxWidth = width;
-      let maxHeight = height;
+      let positionX = 0;
+      let positionY = 0;
+      let lastWidth = 0;
+      let lastHeight = 0;
+      let maxWidth = 0;
+      let maxHeight = 0;
+      let totalWidth = this.paddingLeft;
+      let totalHeight = this.paddingTop;
       let count = 0;
+
       for (let i = 0; i < this.children.length; i++) {
         if(this.children[i].active) {
-          count++;
-          this.children[i].autoLocalPosition.x = width;
-          this.children[i].autoLocalPosition.y = height;
           if(this.direction == "HORIZONTAL") {
-            width+= this.children[i].width;
-            maxWidth = width;
-            if(this.children[i].height > maxHeight) maxHeight = this.children[i].height;
+            totalWidth += this.children[i].width + (count? this.spacing: 0);
           }
           else if(this.direction == "VERTICAL") {
-            height+= this.children[i].height;
-            maxHeight = height;
-            if(this.children[i].width >maxWidth) maxWidth = this.children[i].width;
+            totalHeight += this.children[i].height + (count? this.spacing: 0);
           }
+          if(this.children[i].width >= maxWidth) maxWidth = this.children[i].width;
+          if(this.children[i].height >= maxHeight) maxHeight = this.children[i].height;
+          count++;
         }
       }
-      maxWidth += this.paddingRight;
-      maxHeight += this.paddingTop+this.paddingBottom;
+      if(this.direction == "HORIZONTAL") {
+        totalWidth += this.paddingRight;
+        totalHeight += maxHeight + this.paddingBottom;
+      }
+      else if(this.direction == "VERTICAL") {
+        totalWidth += maxWidth + this.paddingRight;
+        totalHeight += this.paddingBottom;
+      }
+
+      count = 0;
+      for (let i = 0; i < this.children.length; i++) {
+        if(this.children[i].active) {
+          if(count == 0) {
+            positionX = this.paddingLeft;
+            positionY = this.paddingTop;
+          }
+          else {
+            if(this.direction == "HORIZONTAL") {
+              positionX += lastWidth + this.spacing;
+            }
+            else if(this.direction == "VERTICAL") {
+              positionY += lastHeight + this.spacing;
+            }
+          }
+          this.children[i].autoLocalPosition.x = positionX;
+          this.children[i].autoLocalPosition.y = positionY;
+          lastWidth = this.children[i].width;
+          lastHeight = this.children[i].height;
+          count++;
+        }
+      }
       if(count > 0) {
-        this.width = maxWidth;
-        this.height = maxHeight;
+        this.width = totalWidth;
+        this.height = totalHeight;
       }
     }
   }
@@ -181,11 +213,11 @@ class FrameComponentHTML extends ComponentHTML {
   }
 
   setLocalFromAuto = () => {
-    this.parent.calculateChildren();
     this.parent.refreshPropertiesAllBelow();
     this.localPosition.x = this.autoLocalPosition.x;
     this.localPosition.y = this.autoLocalPosition.y;
     this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAbove();
   }
 }
 

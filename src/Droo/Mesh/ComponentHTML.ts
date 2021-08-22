@@ -222,6 +222,7 @@ class ComponentHTML {
 
   refreshProperties = () => {
     if(!this.parent) return;
+    if(this.type == "FRAME") this.calculateChildren();
     this.refreshPosition();
     this.refreshBoundingRect();
     this.refreshShape();
@@ -235,6 +236,15 @@ class ComponentHTML {
       let currentNode: ComponentHTML = queue.pop();
       currentNode.refreshProperties();
       for (let i = 0; i < currentNode.children.length; i++) queue.unshift(currentNode.children[i]);
+    }
+  }
+
+  refreshPropertiesAllAbove = () => {
+    this.refreshProperties();
+    let currentNode: ComponentHTML = this;
+    while (currentNode.parent !== null) {
+      currentNode.refreshProperties();
+      currentNode = currentNode.parent;
     }
   }
 

@@ -201,12 +201,14 @@ class Designer {
   }
 
   setupDemo = () => {
-    const a = new FrameComponentHTML(new Vector2(100,100), 250, 250, "#FFBF00");
-    const b = new FrameComponentHTML(new Vector2(400,400), 250, 250, "#AAFFFF", "AUTO", "HORIZONTAL");
-    const x = new FrameComponentHTML(new Vector2(500,200), 50, 50, "#0FFF00");
-    const y = new FrameComponentHTML(new Vector2(700,300), 70, 70, "#FF0000");
+    const a = new FrameComponentHTML(new Vector2(50,50), 250, 250, "#FFBF00");
+    const b = new FrameComponentHTML(new Vector2(350,50), 200, 200, "#AAFFFF", "AUTO", "HORIZONTAL");
+    const c = new FrameComponentHTML(new Vector2(600,50), 200, 200, "#7665C0", "AUTO", "VERTICAL");
+    const x = new FrameComponentHTML(new Vector2(500,400), 50, 50, "#0FFF00");
+    const y = new FrameComponentHTML(new Vector2(700,400), 70, 70, "#FF0000");
     this.canvasHTML.addComponent(a);
     this.canvasHTML.addComponent(b);
+    this.canvasHTML.addComponent(c);
     this.canvasHTML.addComponent(x);
     this.canvasHTML.addComponent(y);
     this.update();
