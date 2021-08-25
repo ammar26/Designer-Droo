@@ -60,6 +60,19 @@ class ComponentHTML {
     this.lastRenderer = null;
   }
 
+  getChildIndex = (component: ComponentHTML) => {
+    for(let i = 0; i < this.children.length; i++) {
+      if(component.id == this.children[i].id) return i;
+    }
+    return -1;
+  }
+
+  changeChildIndex = (component: ComponentHTML, newIndex: number) => {
+    let currentIndex = this.getChildIndex(component);
+    this.children.splice(currentIndex, 1);
+    this.children.splice(newIndex, 0, component);
+  }
+
   addChild = (component: ComponentHTML) => {
     if(component.parent) component.parent.removeChild(component);
     component.parent = this;
@@ -290,6 +303,14 @@ class ComponentHTML {
     && this.boundingRect.isPositionInside(rect.bottomRight))
     return true;
     else return false;
+  }
+
+  setLocalFromAuto = () => {
+    this.parent.refreshPropertiesAllBelow();
+    this.localPosition.x = this.autoLocalPosition.x;
+    this.localPosition.y = this.autoLocalPosition.y;
+    this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAbove();
   }
 
   isPositionInsideShape = (position: Vector2) : boolean => { return false; }

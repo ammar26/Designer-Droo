@@ -182,14 +182,14 @@ class FrameComponentHTML extends ComponentHTML {
   render = (renderer: RendererHTML) => {
     if(!this.active) return;
     this.lastRenderer = renderer;
+    const zoomAdjustment = 1/renderer.cameraZoom;
+    const outlineWidthZoomed = this.outlineWidth * zoomAdjustment;
 
     if(this.fillMode) {
       renderer.ctx.fillStyle = this.fillColor;
       renderer.ctx.fillRect(this.shape.topLeft.x, this.shape.topLeft.y, this.shape.width, this.shape.height);
     }
     
-    const zoomAdjustment = 1/renderer.cameraZoom;
-    const outlineWidthZoomed = this.outlineWidth * zoomAdjustment;
     if(this.outlineMode) {
       renderer.ctx.strokeStyle = this.outlineColor;
       renderer.ctx.lineWidth = outlineWidthZoomed;
@@ -212,12 +212,42 @@ class FrameComponentHTML extends ComponentHTML {
     else return false;
   }
 
-  setLocalFromAuto = () => {
-    this.parent.refreshPropertiesAllBelow();
-    this.localPosition.x = this.autoLocalPosition.x;
-    this.localPosition.y = this.autoLocalPosition.y;
-    this.refreshPropertiesAllBelow();
-    this.refreshPropertiesAllAbove();
+  calculateIndexForAutoLayout = (position: Vector2) => {
+    if(this.layout !== "AUTO") return;
+    let minDistanceIndex = 0;
+    let minDistance = 0;
+    let distance = 0;
+    let lastActiveIndex = 0;
+    let count = 0;
+    for(let i = 0; i < this.children.length; i++) {
+      if(this.children[i].active) {
+        if(this.direction == "HORIZONTAL") {
+          distance = Math.abs(position.x - this.children[i].boundingRect.topLeft.x);
+        }
+        else if(this.direction == "VERTICAL") {
+          distance = Math.abs(position.y - this.children[i].boundingRect.topLeft.y);
+        }
+        if(count == 0 || distance < minDistance) {
+          minDistance = distance;
+          minDistanceIndex = i;
+        }
+        lastActiveIndex = i;
+        count++;
+      }
+    }
+    if(count !== 0) {
+      if(this.direction == "HORIZONTAL") {
+        distance = Math.abs(position.x - this.children[lastActiveIndex].boundingRect.topRight.x);
+      }
+      else if(this.direction == "VERTICAL") {
+        distance = Math.abs(position.y - this.children[lastActiveIndex].boundingRect.bottomLeft.y);
+      }
+      if(distance < minDistance) {
+        minDistance = distance;
+        minDistanceIndex = lastActiveIndex + 1;
+      } 
+    }
+    return minDistanceIndex;
   }
 }
 

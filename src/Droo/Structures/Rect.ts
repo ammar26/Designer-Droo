@@ -21,6 +21,10 @@ class Rect {
     if ((position.x >= this.topLeft.x) && (position.x <= this.topRight.x) && (position.y >= this.topLeft.y) && (position.y <= this.bottomRight.y)) return true;
     return false;
   }
+
+  getMidPoint = () : Vector2 => {
+    return new Vector2((this.topLeft.x + this.topRight.x)/2, (this.topLeft.y + this.bottomLeft.y)/2);
+  }
 }
 
 export default Rect;

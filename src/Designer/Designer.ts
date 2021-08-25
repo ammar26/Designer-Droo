@@ -10,6 +10,8 @@ class Designer {
   mouseMode: string;
   mouseSubMode: string;
   placeholderOutline: ComponentHTML;
+  placeholderCursor: ComponentHTML;
+  placeholderCursorSize: number;
   selectedComponent: ComponentHTML;
   ComponentFrameContainer: ComponentHTML;
 
@@ -25,6 +27,8 @@ class Designer {
     this.canvasHTML.mouse.addEvent("MouseMove", this.onMouseMove);
     this.canvasHTML.mouse.addEvent("MouseUp", this.onMouseUp);
     // Intialize class variables
+    this.placeholderCursor = null;
+    this.placeholderCursorSize = 5;
     this.placeholderOutline = null;
     this.selectedComponent = null;
     this.ComponentFrameContainer = null;
@@ -107,12 +111,22 @@ class Designer {
     if (this.mouseMode == "MOVE") {
       // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected
       if(!this.canvasHTML.mouse.leftDown) this.mouseMode = "SELECTED";
-      // If component is selected then enable its outline and active state
+      // If component is selected then enable its outline
       if(this.selectedComponent) {
         this.selectedComponent.outlineStyle = "SOLID";
         this.selectedComponent.outlineMode = true;
-        this.selectedComponent.active = true;
-        if(this.selectedComponent.autoMode) (this.selectedComponent as FrameComponentHTML).setLocalFromAuto();
+        if(this.selectedComponent.parent.type == "FRAME") {
+          // If parent frame has auto layout, then set selected component state active and move it to newly calculated index position
+          if((this.selectedComponent.parent as FrameComponentHTML).layout == "AUTO") {
+            let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
+            this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
+            this.selectedComponent.active = true;
+            // Change local position of all components in parent to their auto local positions
+            for(let i=0; i<this.selectedComponent.parent.children.length; i++) {
+              this.selectedComponent.parent.children[i].setLocalFromAuto();
+            }
+          }
+        }
       }
       // If frame container exists because it can add selected component
       if(this.ComponentFrameContainer) {
@@ -120,10 +134,15 @@ class Designer {
         this.ComponentFrameContainer.outlineMode = false;
         this.ComponentFrameContainer = null;
       }
-      // Remove the auto child overlay component if it exists
+      // Remove the place holder outline component if it exists
       if(this.placeholderOutline) {
         this.canvasHTML.removeComponent(this.placeholderOutline);
         this.placeholderOutline = null;
+      }
+      // Remove the place holder cursor component if it exists
+      if(this.placeholderCursor) {
+        this.canvasHTML.removeComponent(this.placeholderCursor);
+        this.placeholderCursor = null;
       }
     }
     // Check if mouse over selected component check can be done
@@ -217,10 +236,15 @@ class Designer {
   move = (deltaMovement: Vector2, position: Vector2) => {
     // If component is selected, move it by delta movement values
     if(this.selectedComponent) {
+      let oldSelectedComponentParent = this.selectedComponent.parent;
+      let parentChanged = false;
       this.selectedComponent.outlineMode = false;
       this.selectedComponent.move(new Vector2(deltaMovement.x, deltaMovement.y));
-      // If place holder outline exists then move it along with selected component
-      if(this.placeholderOutline) this.placeholderOutline.move(new Vector2(deltaMovement.x, deltaMovement.y));
+      // If place holder cursor exists then change it position according to current mouse position
+      if(this.placeholderCursor) {
+        this.placeholderCursor.localPosition = this.getPlaceholderCursorPosition(this.ComponentFrameContainer as FrameComponentHTML, position);
+        this.placeholderCursor.refreshProperties();
+      }
       // Remove the data of old frame container
       if(this.ComponentFrameContainer) {
         this.ComponentFrameContainer.outlineMode = false;
@@ -235,19 +259,26 @@ class Designer {
         this.ComponentFrameContainer.outlineMode = true;
         // If selected component has a different parent
         if(this.ComponentFrameContainer.id !== this.selectedComponent.parent.id) {
-          // Remove the auto child overlay component if it exists
+          // Remove the place holder outline component if it exists
           if(this.placeholderOutline) {
             this.canvasHTML.removeComponent(this.placeholderOutline);
             this.placeholderOutline = null;
           }
+          // Remove the place holder cursor component if it exists
+          if(this.placeholderCursor) {
+            this.canvasHTML.removeComponent(this.placeholderCursor);
+            this.placeholderCursor = null;
+          }
           // If frame container has free layout then add selected component as active to new frame container
           if((this.ComponentFrameContainer as FrameComponentHTML).layout == "FREE") {
+            parentChanged = true;
             this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
             this.selectedComponent.active = true;
           }
           // If frame container has auto layout then add selected component as inactive to new frame container
           else if((this.ComponentFrameContainer as FrameComponentHTML).layout == "AUTO") {
             this.selectedComponent.active = false;
+            parentChanged = true;
             this.canvasHTML.addComponent(this.selectedComponent, this.ComponentFrameContainer);
             // Create place holder outline component only in root tree to follow selected component to indicate movement in auto layout frame
             this.placeholderOutline = new FrameComponentHTML(Vector2.getAddedVector(this.ComponentFrameContainer.position, this.selectedComponent.localPosition), this.selectedComponent.width, this.selectedComponent.height);
@@ -256,6 +287,40 @@ class Designer {
             this.placeholderOutline.outlineMode = true;
             this.placeholderOutline.outlineStyle = "DOTTED";
             this.canvasHTML.addComponent(this.placeholderOutline);
+            // Create place holder cursor component only in root tree to indicate where the new object will be placed, by calculating its position from parent container using child index
+            let placeholderCursorWidth = 0;
+            let placeholderCursorHeight = 0;
+            if((this.ComponentFrameContainer as FrameComponentHTML).direction == "HORIZONTAL") {
+              placeholderCursorWidth = this.placeholderCursorSize;
+              placeholderCursorHeight = this.selectedComponent.boundingRect.height;
+            }
+            else if((this.ComponentFrameContainer as FrameComponentHTML).direction == "VERTICAL") {
+              placeholderCursorWidth = this.selectedComponent.boundingRect.width;
+              placeholderCursorHeight = this.placeholderCursorSize;
+            }
+            const placeHolderCursorPosition = this.getPlaceholderCursorPosition(this.ComponentFrameContainer as FrameComponentHTML, position);
+            this.placeholderCursor = new FrameComponentHTML(placeHolderCursorPosition, placeholderCursorWidth, placeholderCursorHeight, "#0096FF");
+            (this.placeholderCursor as FrameComponentHTML).isParentable = false;
+            this.canvasHTML.addComponent(this.placeholderCursor);
+          }
+        }
+        // If selected component has same parent
+        else {
+          // If existing frame container has auto layout
+          if((this.ComponentFrameContainer as FrameComponentHTML).layout == "AUTO") {
+            // If place holder outline exists then move it along with selected component
+            if(this.placeholderOutline) {
+              this.placeholderOutline.move(new Vector2(deltaMovement.x, deltaMovement.y));
+            }
+            // If place holder outline does not exist then create it only in root tree to follow selected component to indicate movement in auto layout frame
+            else {
+              this.placeholderOutline = new FrameComponentHTML(Vector2.getAddedVector(this.ComponentFrameContainer.position, this.selectedComponent.localPosition), this.selectedComponent.width, this.selectedComponent.height);
+              (this.placeholderOutline as FrameComponentHTML).isParentable = false;
+              this.placeholderOutline.fillMode = false;
+              this.placeholderOutline.outlineMode = true;
+              this.placeholderOutline.outlineStyle = "DOTTED";
+              this.canvasHTML.addComponent(this.placeholderOutline);
+            }
           }
         }
       }
@@ -263,13 +328,29 @@ class Designer {
       else {
         // Add it back to canvas if its not already at root
         if(!this.selectedComponent.parent.isRoot) {
+          parentChanged = true;
           this.canvasHTML.addComponent(this.selectedComponent);
           this.selectedComponent.active = true;
         }
-        // Remove the auto child overlay component if it exists
+        // Remove the place holder outline component if it exists
         if(this.placeholderOutline) {
           this.canvasHTML.removeComponent(this.placeholderOutline);
           this.placeholderOutline = null;
+        }
+        // Remove the place holder cursor component if it exists
+        if(this.placeholderCursor) {
+          this.canvasHTML.removeComponent(this.placeholderCursor);
+          this.placeholderCursor = null;
+        }
+      }
+      // If parent is changed from last event call
+      if(parentChanged) {
+        // If old parent of selected component was frame with auto layout, then change local position of all components in it to their auto local positions
+        if(oldSelectedComponentParent && oldSelectedComponentParent.type == "FRAME" && (oldSelectedComponentParent as FrameComponentHTML).layout == "AUTO")
+        {
+          for(let i=0; i<oldSelectedComponentParent.children.length; i++) {
+            oldSelectedComponentParent.children[i].setLocalFromAuto();
+          }
         }
       }
     }
@@ -305,6 +386,41 @@ class Designer {
     this.mouseMode = mode;
   }
 
+  getPlaceholderCursorPosition = (component: FrameComponentHTML, position: Vector2) => {
+    const index = component.calculateIndexForAutoLayout(position);
+    // If frame is empty
+    if(index == 0 && !component.children[0].active) {
+      return new Vector2(component.boundingRect.topLeft.x + component.paddingLeft, component.boundingRect.topLeft.y + component.paddingTop);
+    }
+    // If insertion is at first index
+    else if(index == 0) {
+      if(component.direction == "HORIZONTAL") {
+        return new Vector2((component.boundingRect.topLeft.x + (component.paddingLeft/2)) - (this.placeholderCursorSize/2), component.boundingRect.topLeft.y + component.paddingTop);
+      }
+      else if(component.direction == "VERTICAL") {
+        return new Vector2(component.boundingRect.topLeft.x + component.paddingLeft, (component.boundingRect.topLeft.y + (component.paddingTop/2)) - (this.placeholderCursorSize/2));
+      }
+    }
+    // If insertion is at last index
+    else if (index >= component.children.length || !component.children[index].active) {
+      if(component.direction == "HORIZONTAL") {
+        return new Vector2((component.boundingRect.topRight.x - (component.paddingRight/2)) - (this.placeholderCursorSize/2), component.boundingRect.topRight.y + component.paddingTop);
+      }
+      else if(component.direction == "VERTICAL") {
+        return new Vector2(component.boundingRect.bottomLeft.x + component.paddingLeft, (component.boundingRect.bottomLeft.y - (component.paddingBottom/2)) - (this.placeholderCursorSize/2));
+      }
+    }
+    // If insertion is at middle index
+    else {
+      if(component.direction == "HORIZONTAL") {
+        return new Vector2((component.children[index].boundingRect.topLeft.x - (component.spacing/2)) - (this.placeholderCursorSize/2), component.children[index].boundingRect.topLeft.y);
+      }
+      else if(component.direction == "VERTICAL") {
+        return new Vector2(component.children[index].boundingRect.topLeft.x, (component.children[index].boundingRect.topLeft.y- (component.spacing/2)) - (this.placeholderCursorSize/2));
+      }
+    }
+  }
+
   updateCursor = () => {
     // Setup the cursor mode according to mouse mode
     let mouseCursorMode = "NONE";
@@ -324,6 +440,7 @@ class Designer {
     this.updateCursor();
     this.canvasHTML.update();
     if(this.placeholderOutline) this.placeholderOutline.render(this.canvasHTML.rendererHTML);
+    if(this.placeholderCursor) this.placeholderCursor.render(this.canvasHTML.rendererHTML);
   }
 }
 

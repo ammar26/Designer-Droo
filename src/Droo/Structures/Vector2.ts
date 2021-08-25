@@ -57,6 +57,11 @@ class Vector2 {
 
     return new Vector2(x, y);
   }
+
+  static getDistance = (a: Vector2, b: Vector2) => {
+    const c = Vector2.getSubtractedVector(a,b);
+    return Math.sqrt( (c.x * c.x) + (c.y * c.y));
+  }
 }
 
 export default Vector2;
