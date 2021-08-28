@@ -94,8 +94,12 @@ class CanvasHTML {
   }
 
   addComponent = (component: ComponentHTML, parentComponent: ComponentHTML = null) => {
-    if(!parentComponent) this.defaultRootTreeNode.addChild(component);
-    else parentComponent.addChild(component);
+    if(!parentComponent) {
+      this.defaultRootTreeNode.addChild(component);
+    }
+    else {
+      parentComponent.addChild(component);
+    }
   }
 
   removeComponent = (component: ComponentHTML) => {

@@ -48,7 +48,7 @@ class FrameComponentHTML extends ComponentHTML {
       component.autoMode = true;
     }
     this.refreshPropertiesAllBelow();
-    this.refreshPropertiesAllAbove();
+    this.refreshPropertiesAllAboveAndBelow();
   }
 
   removeChild = (component: ComponentHTML) => {
@@ -64,7 +64,7 @@ class FrameComponentHTML extends ComponentHTML {
       component.autoMode = false;   
     }
     this.refreshPropertiesAllBelow();
-    this.refreshPropertiesAllAbove();
+    this.refreshPropertiesAllAboveAndBelow();
   }
 
   moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
@@ -78,7 +78,7 @@ class FrameComponentHTML extends ComponentHTML {
       component.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
     this.refreshPropertiesAllBelow();
-    this.refreshPropertiesAllAbove();
+    this.refreshPropertiesAllAboveAndBelow();
     return true;
   }
 

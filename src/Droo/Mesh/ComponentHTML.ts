@@ -67,10 +67,12 @@ class ComponentHTML {
     return -1;
   }
 
-  changeChildIndex = (component: ComponentHTML, newIndex: number) => {
+  changeChildIndex = (component: ComponentHTML, newIndex: number) : boolean=> {
     let currentIndex = this.getChildIndex(component);
+    if(currentIndex == newIndex) return false;
     this.children.splice(currentIndex, 1);
     this.children.splice(newIndex, 0, component);
+    return true;
   }
 
   addChild = (component: ComponentHTML) => {
@@ -252,13 +254,16 @@ class ComponentHTML {
     }
   }
 
-  refreshPropertiesAllAbove = () => {
+  refreshPropertiesAllAboveAndBelow = () => {
     this.refreshProperties();
     let currentNode: ComponentHTML = this;
+    let nodeAfterRoot: ComponentHTML = null;
     while (currentNode.parent !== null) {
       currentNode.refreshProperties();
+      nodeAfterRoot = currentNode;
       currentNode = currentNode.parent;
     }
+    nodeAfterRoot.refreshPropertiesAllBelow();
   }
 
   isPositionOverOutline = (position: Vector2) : number => {
@@ -310,7 +315,7 @@ class ComponentHTML {
     this.localPosition.x = this.autoLocalPosition.x;
     this.localPosition.y = this.autoLocalPosition.y;
     this.refreshPropertiesAllBelow();
-    this.refreshPropertiesAllAbove();
+    this.refreshPropertiesAllAboveAndBelow();
   }
 
   isPositionInsideShape = (position: Vector2) : boolean => { return false; }

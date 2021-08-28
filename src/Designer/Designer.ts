@@ -116,11 +116,21 @@ class Designer {
         this.selectedComponent.outlineStyle = "SOLID";
         this.selectedComponent.outlineMode = true;
         if(this.selectedComponent.parent.type == "FRAME") {
-          // If parent frame has auto layout, then set selected component state active and move it to newly calculated index position
+          // If parent frame has auto layout
           if((this.selectedComponent.parent as FrameComponentHTML).layout == "AUTO") {
-            let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
-            this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
-            this.selectedComponent.active = true;
+            // If selected component is already active, then only add if its newly calculated index position is not same
+            if(this.selectedComponent.active) {
+              if(this.isIndexPositionValid((this.ComponentFrameContainer as FrameComponentHTML), position)) {
+                let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
+                this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
+              }
+            }
+            // If selected component state not active, then make it active and move it to newly calculated index position
+            else {
+              let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
+              this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
+              this.selectedComponent.active = true;
+            }
             // Change local position of all components in parent to their auto local positions
             for(let i=0; i<this.selectedComponent.parent.children.length; i++) {
               this.selectedComponent.parent.children[i].setLocalFromAuto();
@@ -220,16 +230,18 @@ class Designer {
   }
 
   setupDemo = () => {
-    const a = new FrameComponentHTML(new Vector2(50,50), 250, 250, "#FFBF00");
-    const b = new FrameComponentHTML(new Vector2(350,50), 200, 200, "#AAFFFF", "AUTO", "HORIZONTAL");
-    const c = new FrameComponentHTML(new Vector2(600,50), 200, 200, "#7665C0", "AUTO", "VERTICAL");
+    const a = new FrameComponentHTML(new Vector2(50,50), 200, 200, "#FFBF00");
+    const b = new FrameComponentHTML(new Vector2(300,50), 200, 200, "#AAFFFF", "AUTO", "HORIZONTAL");
+    const c = new FrameComponentHTML(new Vector2(700,50), 200, 200, "#7665C0", "AUTO", "VERTICAL");
     const x = new FrameComponentHTML(new Vector2(500,400), 50, 50, "#0FFF00");
-    const y = new FrameComponentHTML(new Vector2(700,400), 70, 70, "#FF0000");
+    const y = new FrameComponentHTML(new Vector2(600,400), 80, 80, "#FF0000");
+    const z = new FrameComponentHTML(new Vector2(700,400), 80, 80, "#FFF00F");
     this.canvasHTML.addComponent(a);
     this.canvasHTML.addComponent(b);
     this.canvasHTML.addComponent(c);
     this.canvasHTML.addComponent(x);
     this.canvasHTML.addComponent(y);
+    this.canvasHTML.addComponent(z);
     this.update();
   }
 
@@ -240,18 +252,22 @@ class Designer {
       let parentChanged = false;
       this.selectedComponent.outlineMode = false;
       this.selectedComponent.move(new Vector2(deltaMovement.x, deltaMovement.y));
-      // If place holder cursor exists then change it position according to current mouse position
-      if(this.placeholderCursor) {
-        this.placeholderCursor.localPosition = this.getPlaceholderCursorPosition(this.ComponentFrameContainer as FrameComponentHTML, position);
-        this.placeholderCursor.refreshProperties();
-      }
       // Remove the data of old frame container
       if(this.ComponentFrameContainer) {
         this.ComponentFrameContainer.outlineMode = false;
         this.ComponentFrameContainer = null;
       }
       // If selected component can be added to a frame, then update the data for new frame container
-      this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.selectedComponent);
+      // If place holder outline is present then use it instead of selected component to pick parent frame
+      if(this.placeholderOutline) {
+        (this.selectedComponent as FrameComponentHTML).isParentable = false;
+        this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.placeholderOutline); 
+        (this.selectedComponent as FrameComponentHTML).isParentable = true;
+      }
+      // If place holder outline is not present then use selected component to pick parent frame
+      else {
+        this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.selectedComponent); 
+      }
       // If frame container exists then it can add selected component
       if(this.ComponentFrameContainer) {
         // Draw the frame continer outline
@@ -314,12 +330,42 @@ class Designer {
             }
             // If place holder outline does not exist then create it only in root tree to follow selected component to indicate movement in auto layout frame
             else {
+              this.selectedComponent.setLocalFromAuto();
               this.placeholderOutline = new FrameComponentHTML(Vector2.getAddedVector(this.ComponentFrameContainer.position, this.selectedComponent.localPosition), this.selectedComponent.width, this.selectedComponent.height);
               (this.placeholderOutline as FrameComponentHTML).isParentable = false;
               this.placeholderOutline.fillMode = false;
               this.placeholderOutline.outlineMode = true;
               this.placeholderOutline.outlineStyle = "DOTTED";
               this.canvasHTML.addComponent(this.placeholderOutline);
+            }
+            // If place holder cursor exists then change it position according to current mouse position
+            if(this.placeholderCursor) {
+              this.placeholderCursor.localPosition = this.getPlaceholderCursorPosition(this.ComponentFrameContainer as FrameComponentHTML, position);
+              this.placeholderCursor.refreshProperties();
+            }
+            else {
+              // Create place holder cursor component only in root tree to indicate where the new object will be placed, by calculating its position from parent container using child index
+              let placeholderCursorWidth = 0;
+              let placeholderCursorHeight = 0;
+              if((this.ComponentFrameContainer as FrameComponentHTML).direction == "HORIZONTAL") {
+                placeholderCursorWidth = this.placeholderCursorSize;
+                placeholderCursorHeight = this.selectedComponent.boundingRect.height;
+              }
+              else if((this.ComponentFrameContainer as FrameComponentHTML).direction == "VERTICAL") {
+                placeholderCursorWidth = this.selectedComponent.boundingRect.width;
+                placeholderCursorHeight = this.placeholderCursorSize;
+              }
+              const placeHolderCursorPosition = this.getPlaceholderCursorPosition(this.ComponentFrameContainer as FrameComponentHTML, position);
+              this.placeholderCursor = new FrameComponentHTML(placeHolderCursorPosition, placeholderCursorWidth, placeholderCursorHeight, "#0096FF");
+              (this.placeholderCursor as FrameComponentHTML).isParentable = false;
+              this.canvasHTML.addComponent(this.placeholderCursor);
+            }
+            // If place holder cursor is enabled, then make it unactive if its newly calculated index position is same
+            if(this.placeholderCursor) {
+              if(this.selectedComponent.active) {
+                if(this.isIndexPositionValid((this.ComponentFrameContainer as FrameComponentHTML), position)) this.placeholderCursor.active = true;
+                else this.placeholderCursor.active = false;
+              }              
             }
           }
         }
@@ -386,7 +432,17 @@ class Designer {
     this.mouseMode = mode;
   }
 
-  getPlaceholderCursorPosition = (component: FrameComponentHTML, position: Vector2) => {
+  isIndexPositionValid = (frame: FrameComponentHTML, position: Vector2) => {
+    // If frame layout is auto then calculate valid index position
+    if(frame.layout == "AUTO") {
+      const currentIndex = frame.getChildIndex(this.selectedComponent);
+      const newIndex = frame.calculateIndexForAutoLayout(position);
+      if(currentIndex == newIndex || currentIndex+1 == newIndex) return false;
+      else return true;
+    }
+  }
+
+  getPlaceholderCursorPosition = (component: FrameComponentHTML, position: Vector2) : Vector2 => {
     const index = component.calculateIndexForAutoLayout(position);
     // If frame is empty
     if(index == 0 && !component.children[0].active) {
