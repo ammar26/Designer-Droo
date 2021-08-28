@@ -49,6 +49,7 @@ class FrameComponentHTML extends ComponentHTML {
     }
     this.refreshPropertiesAllBelow();
     this.refreshPropertiesAllAboveAndBelow();
+    if(this.children.length > 0) this.isResizable = false;
   }
 
   removeChild = (component: ComponentHTML) => {
@@ -65,6 +66,7 @@ class FrameComponentHTML extends ComponentHTML {
     }
     this.refreshPropertiesAllBelow();
     this.refreshPropertiesAllAboveAndBelow();
+    if(this.children.length == 0) this.isResizable = true;
   }
 
   moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
@@ -107,9 +109,25 @@ class FrameComponentHTML extends ComponentHTML {
       }
     }
     else if (this.layout == "AUTO") {
-      
+      if(x) {
+        if(edge == "LEFT") {
+          component.width -= x;
+        }
+        else if(edge == "RIGHT") {
+          component.width += x;
+        }
+      }
+      if(y) {
+        if(edge == "TOP") {
+          component.height -= y;
+        }
+        else if(edge == "BOTTOM") {
+          component.height += y;
+        }
+      }
     }
-    component.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllBelow();
+    this.refreshPropertiesAllAboveAndBelow();
   }
 
   calculateChildren = () => {
