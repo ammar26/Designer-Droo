@@ -150,7 +150,12 @@ class CanvasHTML {
 
     const queue = [];
     let pickedComponent = null;
-    for (let i = 0; i < treeNode.children.length; i++) if(treeNode.children[i].active) queue.unshift(treeNode.children[i]);
+    for (let i = 0; i < treeNode.children.length; i++) {
+      if(treeNode.children[i].active) {
+        const frameNode = treeNode.children[i] as FrameComponentHTML;
+        if(frameNode.isParentableAllBelow) queue.unshift(treeNode.children[i]);
+      }
+    }
     while (queue.length > 0) {
       let currentNode: ComponentHTML = queue.pop();
       if(currentNode.id !== component.id && currentNode.type == "FRAME") {
@@ -168,7 +173,12 @@ class CanvasHTML {
           }
         }
       }
-      for (let i = 0; i < currentNode.children.length; i++) if(currentNode.children[i].active) queue.unshift(currentNode.children[i]);
+      for (let i = 0; i < currentNode.children.length; i++) {
+        if(currentNode.children[i].active) {
+          const frameNode = currentNode.children[i] as FrameComponentHTML;
+          if(frameNode.isParentableAllBelow) queue.unshift(currentNode.children[i]);
+        }
+      }
     }
     return pickedComponent;
   }

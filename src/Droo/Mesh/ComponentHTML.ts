@@ -60,74 +60,74 @@ class ComponentHTML {
     this.lastRenderer = null;
   }
 
-  getChildIndex = (component: ComponentHTML) => {
+  getChildIndex = (childComponent: ComponentHTML) => {
     for(let i = 0; i < this.children.length; i++) {
-      if(component.id == this.children[i].id) return i;
+      if(childComponent.id == this.children[i].id) return i;
     }
     return -1;
   }
 
-  changeChildIndex = (component: ComponentHTML, newIndex: number) : boolean=> {
-    let currentIndex = this.getChildIndex(component);
+  changeChildIndex = (childComponent: ComponentHTML, newIndex: number) : boolean=> {
+    let currentIndex = this.getChildIndex(childComponent);
     if(currentIndex == newIndex) return false;
     this.children.splice(currentIndex, 1);
-    this.children.splice(newIndex, 0, component);
+    this.children.splice(newIndex, 0, childComponent);
     return true;
   }
 
-  addChild = (component: ComponentHTML) => {
-    if(component.parent) component.parent.removeChild(component);
-    component.parent = this;
-    this.children.push(component);
-    component.localPosition.x -= this.position.x;
-    component.localPosition.y -= this.position.y;
-    component.calculateChildren();
-    component.refreshPropertiesAllBelow();
+  addChild = (childComponent: ComponentHTML) => {
+    if(childComponent.parent) childComponent.parent.removeChild(childComponent);
+    childComponent.parent = this;
+    this.children.push(childComponent);
+    childComponent.localPosition.x -= this.position.x;
+    childComponent.localPosition.y -= this.position.y;
+    childComponent.calculateChildren();
+    childComponent.refreshPropertiesAllBelow();
   }
 
-  removeChild = (component: ComponentHTML) => {
-    this.children = this.children.filter(x => x.id !== component.id);
-    component.parent = null;
-    component.localPosition.x += this.position.x;
-    component.localPosition.y += this.position.y;
-    component.calculateChildren();
-    component.refreshPropertiesAllBelow();
+  removeChild = (childComponent: ComponentHTML) => {
+    this.children = this.children.filter(x => x.id !== childComponent.id);
+    childComponent.parent = null;
+    childComponent.localPosition.x += this.position.x;
+    childComponent.localPosition.y += this.position.y;
+    childComponent.calculateChildren();
+    childComponent.refreshPropertiesAllBelow();
   }
 
-  moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
+  moveChild = (deltaPosition : Vector2, childComponent: ComponentHTML) : boolean => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
-    component.localPosition.x += (deltaPosition.x * zoomAdjustment);
-    component.localPosition.y += (deltaPosition.y * zoomAdjustment);
-    component.calculateChildren();
-    component.refreshPropertiesAllBelow();
+    childComponent.localPosition.x += (deltaPosition.x * zoomAdjustment);
+    childComponent.localPosition.y += (deltaPosition.y * zoomAdjustment);
+    childComponent.calculateChildren();
+    childComponent.refreshPropertiesAllBelow();
     return true;
   }
 
-  resizeChild = (x:number, y:number, edge: string, component: ComponentHTML) => {
+  resizeChild = (x:number, y:number, edge: string, childComponent: ComponentHTML) => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
     x *= zoomAdjustment;
     y *= zoomAdjustment;
     if(x) {
       if(edge == "LEFT") {
-        component.localPosition.x += x;
-        component.width -= x;
+        childComponent.localPosition.x += x;
+        childComponent.width -= x;
       }
       else if(edge == "RIGHT") {
-        component.width += x;
+        childComponent.width += x;
       }
     }
 
     if(y) {
       if(edge == "TOP") {
-        component.localPosition.y += y;
-        component.height -= y;
+        childComponent.localPosition.y += y;
+        childComponent.height -= y;
       }
       else if(edge == "BOTTOM") {
-        component.height += y;
+        childComponent.height += y;
       }
     }
-    component.calculateChildren();
-    component.refreshPropertiesAllBelow();
+    childComponent.calculateChildren();
+    childComponent.refreshPropertiesAllBelow();
   }
 
   calculateChildren = () => {

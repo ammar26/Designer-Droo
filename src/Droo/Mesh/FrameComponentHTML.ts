@@ -16,6 +16,7 @@ class FrameComponentHTML extends ComponentHTML {
   spacing: number;
 
   isParentable: boolean;
+  isParentableAllBelow: boolean;
 
   constructor(localPosition: Vector2, width: number, height: number, fillColor: string = "#000000", layout: string = "FREE", direction: string = "NONE") {
     super(localPosition, width, height, "FRAME");
@@ -27,102 +28,103 @@ class FrameComponentHTML extends ComponentHTML {
     this.paddingBottom = 10;
     this.paddingLeft = 10;
     this.paddingRight = 10;
-    this.spacing = 20;
+    this.spacing = 10;
 
     this.isParentable = true;
+    this.isParentableAllBelow = true;
     this.refreshBoundingRect();
     this.refreshShape();
   }
 
-  addChild = (component: ComponentHTML) => {
-    if(component.parent) component.parent.removeChild(component);
-    component.parent = this;
-    this.children.push(component);
+  addChild = (childComponent: ComponentHTML) => {
+    if(childComponent.parent) childComponent.parent.removeChild(childComponent);
+    childComponent.parent = this;
+    this.children.push(childComponent);
+    if(this.children.length > 0) this.isResizable = false;
     if(this.layout == "FREE") {
-      component.localPosition.x -= this.position.x;
-      component.localPosition.y -= this.position.y;
+      childComponent.localPosition.x -= this.position.x;
+      childComponent.localPosition.y -= this.position.y;
     } 
     else if (this.layout == "AUTO") {
-      component.localPosition.x -= this.position.x;
-      component.localPosition.y -= this.position.y;
-      component.autoMode = true;
+      childComponent.localPosition.x -= this.position.x;
+      childComponent.localPosition.y -= this.position.y;
+      childComponent.autoMode = true;
     }
     this.refreshPropertiesAllBelow();
     this.refreshPropertiesAllAboveAndBelow();
-    if(this.children.length > 0) this.isResizable = false;
   }
 
-  removeChild = (component: ComponentHTML) => {
-    this.children = this.children.filter(x => x.id !== component.id);
-    component.parent = null;
+  removeChild = (childComponent: ComponentHTML) => {
+    this.children = this.children.filter(x => x.id !== childComponent.id);
+    childComponent.parent = null;
+    if(this.children.length == 0) this.isResizable = true;
     if(this.layout == "FREE") {
-      component.localPosition.x += this.position.x;
-      component.localPosition.y += this.position.y;
+      childComponent.localPosition.x += this.position.x;
+      childComponent.localPosition.y += this.position.y;
     }
     else if (this.layout == "AUTO") {
-      component.localPosition.x += this.position.x;
-      component.localPosition.y += this.position.y;
-      component.autoMode = false;   
+      childComponent.localPosition.x += this.position.x;
+      childComponent.localPosition.y += this.position.y;
+      childComponent.autoMode = false;   
     }
     this.refreshPropertiesAllBelow();
     this.refreshPropertiesAllAboveAndBelow();
-    if(this.children.length == 0) this.isResizable = true;
   }
 
-  moveChild = (deltaPosition : Vector2, component: ComponentHTML) : boolean => {
+  moveChild = (deltaPosition : Vector2, childComponent: ComponentHTML) : boolean => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
     if(this.layout == "FREE") {
-      component.localPosition.x += (deltaPosition.x * zoomAdjustment);
-      component.localPosition.y += (deltaPosition.y * zoomAdjustment);
+      childComponent.localPosition.x += (deltaPosition.x * zoomAdjustment);
+      childComponent.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
     else if (this.layout == "AUTO") {
-      component.localPosition.x += (deltaPosition.x * zoomAdjustment);
-      component.localPosition.y += (deltaPosition.y * zoomAdjustment);
+      childComponent.localPosition.x += (deltaPosition.x * zoomAdjustment);
+      childComponent.localPosition.y += (deltaPosition.y * zoomAdjustment);
     }
     this.refreshPropertiesAllBelow();
     this.refreshPropertiesAllAboveAndBelow();
     return true;
   }
 
-  resizeChild = (x:number, y:number, edge: string, component: ComponentHTML) => {
+  resizeChild = (x:number, y:number, edge: string, childComponent: ComponentHTML) => {
     let zoomAdjustment = 1; if(this.lastRenderer) zoomAdjustment = 1/this.lastRenderer.cameraZoom;
     x *= zoomAdjustment;
     y *= zoomAdjustment;
     if(this.layout == "FREE") {
       if(x) {
         if(edge == "LEFT") {
-          component.localPosition.x += x;
-          component.width -= x;
+          childComponent.localPosition.x += x;
+          childComponent.width -= x;
         }
         else if(edge == "RIGHT") {
-          component.width += x;
+          childComponent.width += x;
         }
       }
       if(y) {
         if(edge == "TOP") {
-          component.localPosition.y += y;
-          component.height -= y;
+          childComponent.localPosition.y += y;
+          childComponent.height -= y;
         }
         else if(edge == "BOTTOM") {
-          component.height += y;
+          childComponent.height += y;
         }
       }
     }
     else if (this.layout == "AUTO") {
       if(x) {
         if(edge == "LEFT") {
-          component.width -= x;
+          childComponent.width -= x;
         }
         else if(edge == "RIGHT") {
-          component.width += x;
+          childComponent.width += x;
         }
       }
       if(y) {
         if(edge == "TOP") {
-          component.height -= y;
+          childComponent.height -= y;
         }
         else if(edge == "BOTTOM") {
-          component.height += y;
+          childComponent.height += y;
         }
       }
     }
@@ -230,7 +232,7 @@ class FrameComponentHTML extends ComponentHTML {
     else return false;
   }
 
-  calculateIndexForAutoLayout = (position: Vector2) => {
+  getChildIndexForAutoLayout = (position: Vector2) => {
     if(this.layout !== "AUTO") return;
     let minDistanceIndex = 0;
     let minDistance = 0;

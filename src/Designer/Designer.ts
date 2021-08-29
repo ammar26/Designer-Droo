@@ -46,16 +46,16 @@ class Designer {
     // Get the position in screen coordinates
     const position = this.canvasHTML.getScreenPosition(new Vector2(ev.clientX, ev.clientY));
     // Check if selection can be done
-    let select = false;
+    let checkSelect = false;
     if(this.mouseMode == "SELECT") {
-      if(this.canvasHTML.mouse.leftDown) select = true;
+      if(this.canvasHTML.mouse.leftDown) checkSelect = true;
     }
     else if (this.mouseMode == "SELECTED" && this.mouseSubMode == "SELECT") {
-      if(this.canvasHTML.mouse.leftDown) select = true;
+      if(this.canvasHTML.mouse.leftDown) checkSelect = true;
     }
     // ---------------------------------------------------------------- //
     // If mouse modes allows selection, then perform a selection test at mouse position
-    if(select) {
+    if(checkSelect) {
       this.selectComponent(position);
     }
   }
@@ -64,35 +64,35 @@ class Designer {
     // Get the position in screen coordinates
     const position = this.canvasHTML.getScreenPosition(new Vector2(ev.clientX, ev.clientY));
     // Check if resizing can be done
-    let resize = false;
+    let checkResize = false;
     if (this.mouseMode.startsWith("RESIZE")) {
       // If resize is enabled but mouse left button is not pressed, reset mode back to selected
-      if(this.canvasHTML.mouse.leftDown) resize = true;
+      if(this.canvasHTML.mouse.leftDown) checkResize = true;
       else this.mouseMode = "SELECTED";
     }
     // Check if movement can be done
-    let move = false;
+    let checkMove = false;
     if (this.mouseMode == "MOVE") {
       // If move is enabled but mouse left button is not pressed, reset mode back to selected
-      if(this.canvasHTML.mouse.leftDown) move = true;
+      if(this.canvasHTML.mouse.leftDown) checkMove = true;
       else this.mouseMode = "SELECTED";
     }
     // Check if mouse over selected component check can be done
-    let overSelected = false;
-    if (this.mouseMode == "SELECTED") overSelected = true;
+    let checkOverSelected = false;
+    if (this.mouseMode == "SELECTED") checkOverSelected = true;
     // ---------------------------------------------------------------- //
     // If mouse component is selected, then check if mouse is over it for move and resize
-    if(overSelected) {
+    if(checkOverSelected) {
       this.mouseSubMode = this.checkForResizeAndDrag(position);
       // If left mouse button is pressed then copy mouse sub mode to mouse mode
       if(this.canvasHTML.mouse.leftDown) this.mouseMode = this.mouseSubMode;
     }
     // If mouse modes allows resize, then resize
-    else if (resize) {
+    else if (checkResize) {
       this.resize(this.canvasHTML.mouse.deltaMovement);
     }
     // If mouse modes allows move, then move
-    else if (move) {
+    else if (checkMove) {
       this.move(this.canvasHTML.mouse.deltaMovement, position);
     } 
     // Update after move event
@@ -121,13 +121,13 @@ class Designer {
             // If selected component is already active, then only add if its newly calculated index position is not same
             if(this.selectedComponent.active) {
               if(this.isIndexPositionValid((this.ComponentFrameContainer as FrameComponentHTML), position)) {
-                let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
+                let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
                 this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
               }
             }
             // If selected component state not active, then make it active and move it to newly calculated index position
             else {
-              let newIndex = (this.selectedComponent.parent as FrameComponentHTML).calculateIndexForAutoLayout(position);
+              let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
               this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
               this.selectedComponent.active = true;
             }
@@ -156,11 +156,11 @@ class Designer {
       }
     }
     // Check if mouse over selected component check can be done
-    let overSelected = false;
-    if (this.mouseMode == "SELECTED") overSelected = true;
+    let checkOverSelected = false;
+    if (this.mouseMode == "SELECTED") checkOverSelected = true;
     // ---------------------------------------------------------------- //
      // If mouse component is selected, then check if mouse is over it for move and resize
-    if(overSelected) {
+    if(checkOverSelected) {
       this.mouseSubMode = this.checkForResizeAndDrag(position);
     } 
     // Update after move event
@@ -260,9 +260,9 @@ class Designer {
       // If selected component can be added to a frame, then update the data for new frame container
       // If place holder outline is present then use it instead of selected component to pick parent frame
       if(this.placeholderOutline) {
-        (this.selectedComponent as FrameComponentHTML).isParentable = false;
+        (this.selectedComponent as FrameComponentHTML).isParentableAllBelow = false;
         this.ComponentFrameContainer = this.canvasHTML.pickComponentFrameContainer(position, this.placeholderOutline); 
-        (this.selectedComponent as FrameComponentHTML).isParentable = true;
+        (this.selectedComponent as FrameComponentHTML).isParentableAllBelow = true;
       }
       // If place holder outline is not present then use selected component to pick parent frame
       else {
@@ -436,14 +436,14 @@ class Designer {
     // If frame layout is auto then calculate valid index position
     if(frame.layout == "AUTO") {
       const currentIndex = frame.getChildIndex(this.selectedComponent);
-      const newIndex = frame.calculateIndexForAutoLayout(position);
+      const newIndex = frame.getChildIndexForAutoLayout(position);
       if(currentIndex == newIndex || currentIndex+1 == newIndex) return false;
       else return true;
     }
   }
 
   getPlaceholderCursorPosition = (component: FrameComponentHTML, position: Vector2) : Vector2 => {
-    const index = component.calculateIndexForAutoLayout(position);
+    const index = component.getChildIndexForAutoLayout(position);
     // If frame is empty
     if(index == 0 && !component.children[0].active) {
       return new Vector2(component.boundingRect.topLeft.x + component.paddingLeft, component.boundingRect.topLeft.y + component.paddingTop);
