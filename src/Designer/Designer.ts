@@ -103,63 +103,36 @@ class Designer {
     // Get the position in screen coordinates
     const position = this.canvasHTML.getScreenPosition(new Vector2(ev.clientX, ev.clientY));
     // Check if resizing is done
+    let checkPostResize = false;
     if (this.mouseMode.startsWith("RESIZE")) {
-      // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected
-      if(!this.canvasHTML.mouse.leftDown) this.mouseMode = "SELECTED";
+      // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected and enable post resize
+      if(!this.canvasHTML.mouse.leftDown) {
+        this.mouseMode = "SELECTED";
+        checkPostResize = true;
+      }
     }
     // Check if movement is done
+    let checkPostMove = false;
     if (this.mouseMode == "MOVE") {
-      // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected
-      if(!this.canvasHTML.mouse.leftDown) this.mouseMode = "SELECTED";
-      // If component is selected then enable its outline
-      if(this.selectedComponent) {
-        this.selectedComponent.outlineStyle = "SOLID";
-        this.selectedComponent.outlineMode = true;
-        if(this.selectedComponent.parent.type == "FRAME") {
-          // If parent frame has auto layout
-          if((this.selectedComponent.parent as FrameComponentHTML).layout == "AUTO") {
-            // If selected component is already active, then only add if its newly calculated index position is not same
-            if(this.selectedComponent.active) {
-              if(this.isIndexPositionValid((this.ComponentFrameContainer as FrameComponentHTML), position)) {
-                let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
-                this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
-              }
-            }
-            // If selected component state not active, then make it active and move it to newly calculated index position
-            else {
-              let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
-              this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
-              this.selectedComponent.active = true;
-            }
-            // Change local position of all components in parent to their auto local positions
-            for(let i=0; i<this.selectedComponent.parent.children.length; i++) {
-              this.selectedComponent.parent.children[i].setLocalFromAuto();
-            }
-          }
-        }
-      }
-      // If frame container exists because it can add selected component
-      if(this.ComponentFrameContainer) {
-        // Disable the outline of the frame container
-        this.ComponentFrameContainer.outlineMode = false;
-        this.ComponentFrameContainer = null;
-      }
-      // Remove the place holder outline component if it exists
-      if(this.placeholderOutline) {
-        this.canvasHTML.removeComponent(this.placeholderOutline);
-        this.placeholderOutline = null;
-      }
-      // Remove the place holder cursor component if it exists
-      if(this.placeholderCursor) {
-        this.canvasHTML.removeComponent(this.placeholderCursor);
-        this.placeholderCursor = null;
+      // If left mouse button is not pressed then resize is just finished, so reset the mode back to selected and enable post move
+      if(!this.canvasHTML.mouse.leftDown) {
+        this.mouseMode = "SELECTED";
+        checkPostMove = true;
       }
     }
     // Check if mouse over selected component check can be done
     let checkOverSelected = false;
     if (this.mouseMode == "SELECTED") checkOverSelected = true;
     // ---------------------------------------------------------------- //
-     // If mouse component is selected, then check if mouse is over it for move and resize
+    // If mouse resize is completed, then do post resize job
+    if(checkPostResize) {
+      this.postResize(position);
+    }
+    // If mouse move is completed, then do post move job
+    if(checkPostMove) {
+      this.postMove(position);
+    }
+    // If mouse component is selected, then check if mouse is over it for move and resize
     if(checkOverSelected) {
       this.mouseSubMode = this.checkForResizeAndDrag(position);
     } 
@@ -229,27 +202,11 @@ class Designer {
     return "SELECT";
   }
 
-  setupDemo = () => {
-    const a = new FrameComponentHTML(new Vector2(50,50), 200, 200, "#FFBF00");
-    const b = new FrameComponentHTML(new Vector2(300,50), 200, 200, "#AAFFFF", "AUTO", "HORIZONTAL");
-    const c = new FrameComponentHTML(new Vector2(700,50), 200, 200, "#7665C0", "AUTO", "VERTICAL");
-    const x = new FrameComponentHTML(new Vector2(500,400), 50, 50, "#0FFF00");
-    const y = new FrameComponentHTML(new Vector2(600,400), 80, 80, "#FF0000");
-    const z = new FrameComponentHTML(new Vector2(700,400), 80, 80, "#FFF00F");
-    this.canvasHTML.addComponent(a);
-    this.canvasHTML.addComponent(b);
-    this.canvasHTML.addComponent(c);
-    this.canvasHTML.addComponent(x);
-    this.canvasHTML.addComponent(y);
-    this.canvasHTML.addComponent(z);
-    this.update();
-  }
-
   move = (deltaMovement: Vector2, position: Vector2) => {
     // If component is selected, move it by delta movement values
     if(this.selectedComponent) {
-      let oldSelectedComponentParent = this.selectedComponent.parent;
       let parentChanged = false;
+      let oldSelectedComponentParent = this.selectedComponent.parent;
       this.selectedComponent.outlineMode = false;
       this.selectedComponent.move(new Vector2(deltaMovement.x, deltaMovement.y));
       // Remove the data of old frame container
@@ -275,16 +232,8 @@ class Designer {
         this.ComponentFrameContainer.outlineMode = true;
         // If selected component has a different parent
         if(this.ComponentFrameContainer.id !== this.selectedComponent.parent.id) {
-          // Remove the place holder outline component if it exists
-          if(this.placeholderOutline) {
-            this.canvasHTML.removeComponent(this.placeholderOutline);
-            this.placeholderOutline = null;
-          }
-          // Remove the place holder cursor component if it exists
-          if(this.placeholderCursor) {
-            this.canvasHTML.removeComponent(this.placeholderCursor);
-            this.placeholderCursor = null;
-          }
+          // Remove the place holder components if they exists
+          this.removePlaceHolders();
           // If frame container has free layout then add selected component as active to new frame container
           if((this.ComponentFrameContainer as FrameComponentHTML).layout == "FREE") {
             parentChanged = true;
@@ -432,6 +381,48 @@ class Designer {
     this.mouseMode = mode;
   }
 
+  postResize = (position: Vector2) => {
+
+  }
+
+  postMove = (position: Vector2) => {
+    // If component is selected then enable its outline
+    if(this.selectedComponent) {
+      this.selectedComponent.outlineStyle = "SOLID";
+      this.selectedComponent.outlineMode = true;
+      if(this.selectedComponent.parent.type == "FRAME") {
+        // If parent frame has auto layout
+        if((this.selectedComponent.parent as FrameComponentHTML).layout == "AUTO") {
+          // If selected component is already active, then only add if its newly calculated index position is not same
+          if(this.selectedComponent.active) {
+            if(this.isIndexPositionValid((this.ComponentFrameContainer as FrameComponentHTML), position)) {
+              let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
+              this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
+            }
+          }
+          // If selected component state not active, then make it active and move it to newly calculated index position
+          else {
+            let newIndex = (this.selectedComponent.parent as FrameComponentHTML).getChildIndexForAutoLayout(position);
+            this.selectedComponent.parent.changeChildIndex(this.selectedComponent, newIndex);
+            this.selectedComponent.active = true;
+          }
+          // Change local position of all components in parent to their auto local positions
+          for(let i=0; i<this.selectedComponent.parent.children.length; i++) {
+            this.selectedComponent.parent.children[i].setLocalFromAuto();
+          }
+        }
+      }
+    }
+    // If frame container exists because it can add selected component
+    if(this.ComponentFrameContainer) {
+      // Disable the outline of the frame container
+      this.ComponentFrameContainer.outlineMode = false;
+      this.ComponentFrameContainer = null;
+    }
+    // Remove the place holder components if they exists
+    this.removePlaceHolders();
+  }
+
   isIndexPositionValid = (frame: FrameComponentHTML, position: Vector2) => {
     // If frame layout is auto then calculate valid index position
     if(frame.layout == "AUTO") {
@@ -477,6 +468,19 @@ class Designer {
     }
   }
 
+  removePlaceHolders = () => {
+    // Remove the place holder outline component if it exists
+    if(this.placeholderOutline) {
+      this.canvasHTML.removeComponent(this.placeholderOutline);
+      this.placeholderOutline = null;
+    }
+    // Remove the place holder cursor component if it exists
+    if(this.placeholderCursor) {
+      this.canvasHTML.removeComponent(this.placeholderCursor);
+      this.placeholderCursor = null;
+    }
+  }
+
   updateCursor = () => {
     // Setup the cursor mode according to mouse mode
     let mouseCursorMode = "NONE";
@@ -497,6 +501,22 @@ class Designer {
     this.canvasHTML.update();
     if(this.placeholderOutline) this.placeholderOutline.render(this.canvasHTML.rendererHTML);
     if(this.placeholderCursor) this.placeholderCursor.render(this.canvasHTML.rendererHTML);
+  }
+
+  setupDemo = () => {
+    const a = new FrameComponentHTML(new Vector2(50,50), 200, 200, "#FFBF00");
+    const b = new FrameComponentHTML(new Vector2(300,50), 200, 200, "#AAFFFF", "AUTO", "HORIZONTAL");
+    const c = new FrameComponentHTML(new Vector2(700,50), 200, 200, "#7665C0", "AUTO", "VERTICAL");
+    const x = new FrameComponentHTML(new Vector2(500,400), 50, 50, "#0FFF00");
+    const y = new FrameComponentHTML(new Vector2(600,400), 80, 80, "#FF0000");
+    const z = new FrameComponentHTML(new Vector2(700,400), 80, 80, "#FFF00F");
+    this.canvasHTML.addComponent(a);
+    this.canvasHTML.addComponent(b);
+    this.canvasHTML.addComponent(c);
+    this.canvasHTML.addComponent(x);
+    this.canvasHTML.addComponent(y);
+    this.canvasHTML.addComponent(z);
+    this.update();
   }
 }
 
